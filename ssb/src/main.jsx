@@ -1,11 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom"
 import './index.css'
-import App from './App.jsx'
+import Start from './start.jsx'
+import CustomerPage from './user.jsx'
+import BarberPage from './Barberpage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <Router> {/* Wrap everything inside Router */}
+      <Routes>
+        <Route path="/" element={<Start />} />
+        <Route path="/customer" element={<CustomerPage />} />
+        <Route path="/barber" element={<BarberPage />} />
+      </Routes>
+    </Router>
   </StrictMode>,
 )
 

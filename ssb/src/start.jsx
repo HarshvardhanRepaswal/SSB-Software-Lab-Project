@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { /*FaScissors*/ FaUser, FaCalendar } from 'react-icons/fa'
+import { Link } from "react-router-dom"
 
-function App() {
+function Start() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
@@ -12,7 +13,7 @@ function App() {
           <div className="flex items-center justify-center">
             <div className="flex justify-center items-center flex-col gap-2 font-bold text-xl text-blue-600">
               {/* <FaScissors className="h-6 w-6" /> */}
-              <img src="logo.jpeg" alt="" className='h:{25%}'/>
+              <img src="logo.jpeg" alt="" className="h-[25%] w-[25%]"/>
               <span>CutNStyle</span>
             </div>
           </div>
@@ -35,9 +36,11 @@ function App() {
               </div>
               <h2 className="text-2xl font-bold">I'm a Customer</h2>
               <p className="mt-4 text-gray-600">Book appointments, browse services, and connect with our barbers.</p>
-              <div className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                Continue as Customer
-              </div>
+              <Link to="/customer">
+                <button className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                  Continue as Customer
+                </button>
+              </Link>
             </div>
           </div>
 
@@ -51,9 +54,11 @@ function App() {
               <p className="mt-4 text-gray-600">
                 Manage appointments, view your schedule, and update your availability.
               </p>
-              <div className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              <Link to= "/barber">
+              <button className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                 Continue as Barber
-              </div>
+              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -73,4 +78,4 @@ function App() {
   )
 }
 
-export default App
+export default Start
