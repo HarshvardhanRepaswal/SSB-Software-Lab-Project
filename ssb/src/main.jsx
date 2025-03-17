@@ -5,6 +5,7 @@ import './index.css'
 import Start from './start.jsx'
 import CustomerPage from './user.jsx'
 import BarberPage from './Barberpage.jsx'
+import SignIn from './signin.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<Start />} />
         <Route path="/customer" element={<CustomerPage />} />
         <Route path="/barber" element={<BarberPage />} />
+        <Route path="/barberSignIn" element={<SignIn />} />
       </Routes>
     </Router>
   </StrictMode>,
