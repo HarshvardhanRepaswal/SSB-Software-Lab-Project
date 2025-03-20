@@ -1,13 +1,13 @@
+
 import { useState } from 'react'
-import { FaUser, FaEnvelope, FaPhone, FaStore, FaMapMarkerAlt, FaIdCard, FaCalendarAlt, FaLock, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa'
-import { useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { FaUser, FaEnvelope, FaPhone, FaStore, FaMapMarkerAlt, FaCalendarAlt, FaLock, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa'
+import { addbarbers } from './barbers.js' // Import the function from barbers.js
+import { useNavigate } from 'react-router-dom'
 
-function BarberRegistration() {
-  const navigate = useNavigate();
-
+function CreateAccount() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -15,16 +15,12 @@ function BarberRegistration() {
     phone: '',
     shopName: '',
     address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    licenseNumber: '',
     experience: '',
     specialties: [],
     password: '',
     confirmPassword: ''
   })
-
+  
   const specialtyOptions = [
     "Classic Cuts",
     "Modern Styles",
@@ -58,16 +54,37 @@ function BarberRegistration() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-
+    
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords don't match!")
       return
     }
-
-    console.log('Registration data:', formData)
-    // In a real app, you would send this data to your backend
-    alert('Registration submitted! We will review your information and contact you soon.')
+    
+    // Create a new barber object from form data
+    const newBarber = {
+      id: Date.now().toString(), // Generate a unique ID
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      fullName: `${formData.firstName} ${formData.lastName}`,
+      email: formData.email,
+      phone: formData.phone,
+      shopName: formData.shopName,
+      address: formData.address,
+      experience: formData.experience,
+      specialties: formData.specialties,
+      role: "Barber", // Default role
+      password: formData.password // In a real app, you would hash this password
+    }
+    
+    // Add the new barber to the barbers array
+    addbarbers(newBarber)
+    
+    console.log('Registration data:', newBarber)
+    alert('Registration successful! You can now log in with your credentials.')
+    
+    // In a real app, you might redirect to the login page here
+    // window.location.href = '/barber/login'
   }
 
   return (
@@ -78,10 +95,15 @@ function BarberRegistration() {
             {/* <FaScissors className="h-6 w-6 text-blue-600" /> */}
             <span>CutNStyle</span>
           </div>
-          <a href="/barber/login" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-blue-600">
+          <div className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-blue-600">
             <FaArrowLeft className="h-4 w-4" />
-            Back to Login
-          </a>
+            <button
+              onClick={() => navigate("/barberSignIn")}
+             >
+             Back to Login
+            </button>
+            
+          </div>
         </div>
       </header>
 
@@ -114,7 +136,7 @@ function BarberRegistration() {
                       />
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <label htmlFor="lastName" className="block text-sm font-medium">Last Name</label>
                     <div className="relative">
@@ -131,7 +153,7 @@ function BarberRegistration() {
                       />
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <label htmlFor="email" className="block text-sm font-medium">Email Address</label>
                     <div className="relative">
@@ -148,7 +170,7 @@ function BarberRegistration() {
                       />
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <label htmlFor="phone" className="block text-sm font-medium">Phone Number</label>
                     <div className="relative">
@@ -167,7 +189,7 @@ function BarberRegistration() {
                   </div>
                 </div>
               </div>
-
+              
               {/* Shop Information */}
               <div>
                 <h2 className="text-lg font-medium border-b pb-2">Shop Information</h2>
@@ -188,16 +210,16 @@ function BarberRegistration() {
                       />
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2 sm:col-span-2">
-                    <label htmlFor="address" className="block text-sm font-medium">Street Address</label>
+                    <label htmlFor="address" className="block text-sm font-medium">Shop Address</label>
                     <div className="relative">
                       <FaMapMarkerAlt className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <input
                         id="address"
                         name="address"
                         type="text"
-                        placeholder="123 Main Street"
+                        placeholder="123 Main Street, New York, NY 10001"
                         className="pl-10 w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         value={formData.address}
                         onChange={handleInputChange}
@@ -205,70 +227,9 @@ function BarberRegistration() {
                       />
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="city" className="block text-sm font-medium">City</label>
-                    <input
-                      id="city"
-                      name="city"
-                      type="text"
-                      placeholder="New York"
-                      className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="state" className="block text-sm font-medium">State</label>
-                      <input
-                        id="state"
-                        name="state"
-                        type="text"
-                        placeholder="NY"
-                        className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="zipCode" className="block text-sm font-medium">ZIP Code</label>
-                      <input
-                        id="zipCode"
-                        name="zipCode"
-                        type="text"
-                        placeholder="10001"
-                        className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        value={formData.zipCode}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 sm:col-span-2">
-                    <label htmlFor="licenseNumber" className="block text-sm font-medium">Barber License Number</label>
-                    <div className="relative">
-                      <FaIdCard className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <input
-                        id="licenseNumber"
-                        name="licenseNumber"
-                        type="text"
-                        placeholder="BL-123456"
-                        className="pl-10 w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        value={formData.licenseNumber}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
-
+              
               {/* Professional Information */}
               <div>
                 <h2 className="text-lg font-medium border-b pb-2">Professional Information</h2>
@@ -293,7 +254,7 @@ function BarberRegistration() {
                       </select>
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2 sm:col-span-2">
                     <label className="block text-sm font-medium">Specialties (select all that apply)</label>
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -317,7 +278,7 @@ function BarberRegistration() {
                   </div>
                 </div>
               </div>
-
+              
               {/* Account Information */}
               <div>
                 <h2 className="text-lg font-medium border-b pb-2">Account Information</h2>
@@ -347,7 +308,7 @@ function BarberRegistration() {
                     </div>
                     <p className="text-xs text-gray-500">Must be at least 8 characters</p>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <label htmlFor="confirmPassword" className="block text-sm font-medium">Confirm Password</label>
                     <div className="relative">
@@ -374,7 +335,7 @@ function BarberRegistration() {
                   </div>
                 </div>
               </div>
-
+              
               <div className="pt-4">
                 <div className="flex items-start">
                   <div className="flex items-center h-5">
@@ -393,29 +354,27 @@ function BarberRegistration() {
                   </div>
                 </div>
               </div>
-
+              
               <div>
                 <button
                   type="submit"
                   className="w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  onClick={() => navigate("/barberSignIn")}
                 >
                   Create Account
                 </button>
               </div>
             </form>
           </div>
-
+          
           <div className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{" "}
-            {/* <a href="/barber/login" className="text-blue-600 hover:underline"> */}
-              <button
+            <button
                onClick={() => navigate("/barberSignIn")}
                className="text-blue-600 hover:underline"
               >
                 Sign in
               </button>
-
-            {/* </a> */}
           </div>
         </div>
       </main>
@@ -429,4 +388,4 @@ function BarberRegistration() {
   )
 }
 
-export default BarberRegistration
+export default CreateAccount
