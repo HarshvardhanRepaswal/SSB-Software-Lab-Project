@@ -37,15 +37,16 @@ function CreateAccount() {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-  }
 
-  // Validate phone number in real time
-  if (name === "phone") {
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(value)) {
-        setPhoneError("Phone number must be exactly 10 digits.");
-    } else {
-        setPhoneError("");  // Clear error if valid
+      // Validate phone number in real time
+    if (name === "phone") {
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(value)) {
+          setPhoneError("Phone number must be exactly 10 digits.");
+      } 
+      else {
+          setPhoneError("");  // Clear error if valid
+      }
     }
   }
 
@@ -75,28 +76,42 @@ function CreateAccount() {
     
     // Create a new barber object from form data
     const newBarber = {
-      id: Date.now().toString(), // Generate a unique ID
       firstName: formData.firstName,
       lastName: formData.lastName,
-      fullName: `${formData.firstName} ${formData.lastName}`,
       email: formData.email,
       phone: formData.phone,
       shopName: formData.shopName,
       address: formData.address,
       experience: formData.experience,
       specialties: formData.specialties,
-      role: "Barber", // Default role
       password: formData.password // In a real app, you would hash this password
     }
     
-    // Add the new barber to the barbers array
-    addbarbers(newBarber)
-
-    await fetch('http://localhost:4000/create-account', {
-      method: 'POST',
-      body: JSON.stringify(newBarber),
-      headers: {'Content-Type':'application/json'}
-    })
+    try {
+      // Add the new barber to the barbers array (client-side)
+      addbarbers(newBarber);
+      
+      // Send data to the server
+      const response = await fetch('http://localhost:4000/create-account', {
+        method: 'POST',
+        body: JSON.stringify(newBarber),
+        headers: {'Content-Type': 'application/json'}
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create account');
+      }
+      
+      const data = await response.json();
+      console.log('Server response:', data);
+      
+      alert('Registration successful! You can now log in with your credentials.');
+      navigate("/barberSignIn");
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert(`Registration failed: ${error.message}`);
+    }
     
     console.log('Registration data:', newBarber)
     alert('Registration successful! You can now log in with your credentials.')
@@ -266,10 +281,10 @@ function CreateAccount() {
                         required
                       >
                         <option value="">Select years of experience</option>
-                        <option value="0-2">0-2 years</option>
-                        <option value="3-5">3-5 years</option>
-                        <option value="6-10">6-10 years</option>
-                        <option value="10+">10+ years</option>
+                        <option value="0-2 yrs">0-2 years</option>
+                        <option value="3-5 yrs">3-5 years</option>
+                        <option value="6-10 yrs">6-10 years</option>
+                        <option value="10+ yrs">10+ years</option>
                       </select>
                     </div>
                   </div>
@@ -375,13 +390,12 @@ function CreateAccount() {
               </div>
               
               <div>
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  onClick={() => navigate("/barberSignIn")}
-                >
-                  Create Account
-                </button>
+              <button
+                     type="submit"
+                      className="w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+>
+                      Create Account
+              </button>
               </div>
             </form>
           </div>
