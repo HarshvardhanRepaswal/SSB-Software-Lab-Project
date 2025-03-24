@@ -1,29 +1,81 @@
-import { useState } from 'react'
-import { FaPhone, FaCalendarAlt, FaUser, FaEnvelope, FaClock } from 'react-icons/fa'
+"use client"
+
+import { useState, useEffect } from "react"
+import { FaPhone, FaCalendarAlt, FaUser, FaEnvelope, FaClock } from "react-icons/fa"
+import { GiScissors } from "react-icons/gi"
 
 function CustomerPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeService, setActiveService] = useState(null)
+  const [selectedBarber, setSelectedBarber] = useState("")
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    service: '',
-    date: '',
-    time: '',
-    notes: ''
+    name: "",
+    email: "",
+    phone: "",
+    service: "",
+    barber: "", // Added barber field
+    date: "",
+    time: "",
+    notes: "",
   })
+
+  // Calculate min and max dates for booking (today to 10 days ahead)
+  const getTodayDate = () => {
+    return new Date().toISOString().split("T")[0]
+  }
+
+  const getMaxDate = () => {
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 10)
+    return maxDate.toISOString().split("T")[0]
+  }
+
+  // Update form when a service is selected
+  useEffect(() => {
+    if (activeService) {
+      setFormData((prev) => ({ ...prev, service: activeService.id }))
+      // Scroll to booking section
+      document.getElementById("booking").scrollIntoView({ behavior: "smooth" })
+    }
+  }, [activeService])
+
+  // Update form when a barber is selected
+  useEffect(() => {
+    if (selectedBarber) {
+      setFormData((prev) => ({ ...prev, barber: selectedBarber }))
+      // Scroll to booking section
+      document.getElementById("booking").scrollIntoView({ behavior: "smooth" })
+    }
+  }, [selectedBarber])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('Form submitted:', formData)
+    console.log("Form submitted:", formData)
     // Here you would typically send the data to your backend
-    alert('Booking request submitted! We\'ll contact you to confirm your appointment.')
+    alert("Booking request submitted! We'll contact you to confirm your appointment.")
+
+    // Reset form
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      service: "",
+      barber: "",
+      date: "",
+      time: "",
+      notes: "",
+    })
+    setActiveService(null)
+    setSelectedBarber("")
+  }
+
+  const handleBookWithBarber = (barberName) => {
+    setSelectedBarber(barberName)
   }
 
   return (
@@ -34,7 +86,7 @@ function CustomerPage() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-2 font-bold text-xl">
-              {/* <FaScissors className="h-6 w-6 text-blue-600" /> */}
+              <GiScissors className="h-6 w-6 text-blue-600" />
               <span>CutNStyle</span>
             </div>
 
@@ -155,8 +207,8 @@ function CustomerPage() {
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {services.map((service) => (
-                <div 
-                  key={service.name} 
+                <div
+                  key={service.name}
                   className="rounded-lg border p-6 transition-shadow hover:shadow-md cursor-pointer"
                   onClick={() => setActiveService(service)}
                 >
@@ -165,12 +217,24 @@ function CustomerPage() {
                   <p className="mt-4 font-bold text-blue-600">${service.price}</p>
                   <div className="mt-4 flex justify-between items-center">
                     <span className="text-sm text-gray-500">Duration: {service.duration}</span>
-                    <a href="#booking" className="text-sm font-medium text-blue-600 hover:underline flex items-center">
-                      Book Now 
-                      <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveService(service)
+                      }}
+                      className="text-sm font-medium text-blue-600 hover:underline flex items-center"
+                    >
+                      Book Now
+                      <svg
+                        className="ml-1 w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
                       </svg>
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -209,6 +273,13 @@ function CustomerPage() {
                         ))}
                       </div>
                     </div>
+                    {/* Book with this barber button */}
+                    <button
+                      onClick={() => handleBookWithBarber(barber.name)}
+                      className="mt-6 w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      Book with {barber.name}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -250,7 +321,9 @@ function CustomerPage() {
               <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border bg-white p-6 shadow-sm">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label htmlFor="name" className="block text-sm font-medium">Full Name</label>
+                    <label htmlFor="name" className="block text-sm font-medium">
+                      Full Name
+                    </label>
                     <div className="relative">
                       <FaUser className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <input
@@ -266,7 +339,9 @@ function CustomerPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="phone" className="block text-sm font-medium">Phone Number</label>
+                    <label htmlFor="phone" className="block text-sm font-medium">
+                      Phone Number
+                    </label>
                     <div className="relative">
                       <FaPhone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <input
@@ -284,7 +359,9 @@ function CustomerPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="email" className="block text-sm font-medium">Email Address</label>
+                  <label htmlFor="email" className="block text-sm font-medium">
+                    Email Address
+                  </label>
                   <div className="relative">
                     <FaEnvelope className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <input
@@ -300,28 +377,57 @@ function CustomerPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="service" className="block text-sm font-medium">Select Service</label>
-                  <select
-                    id="service"
-                    name="service"
-                    className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.service}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Choose a service</option>
-                    {services.map(service => (
-                      <option key={service.id} value={service.id}>
-                        {service.name} (${service.price})
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="service" className="block text-sm font-medium">
+                      Select Service
+                    </label>
+                    <select
+                      id="service"
+                      name="service"
+                      className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={formData.service}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Choose a service</option>
+                      {services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} (${service.price})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* New Barber Selection Dropdown */}
+                  <div className="space-y-2">
+                    <label htmlFor="barber" className="block text-sm font-medium">
+                      Select Barber
+                    </label>
+                    <select
+                      id="barber"
+                      name="barber"
+                      className="w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={formData.barber}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Choose a barber</option>
+                      {barbers.map((barber) => (
+                        <option key={barber.name} value={barber.name}>
+                          {barber.name} ({barber.role})
+                        </option>
+                      ))}
+                      <option value="Any">Any Available Barber</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label htmlFor="date" className="block text-sm font-medium">Appointment Date</label>
+                    <label htmlFor="date" className="block text-sm font-medium">
+                      Appointment Date
+                    </label>
                     <div className="relative">
                       <FaCalendarAlt className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <input
@@ -331,13 +437,17 @@ function CustomerPage() {
                         className="pl-10 w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         value={formData.date}
                         onChange={handleInputChange}
+                        min={getTodayDate()}
+                        max={getMaxDate()}
                         required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="time" className="block text-sm font-medium">Preferred Time</label>
+                    <label htmlFor="time" className="block text-sm font-medium">
+                      Preferred Time
+                    </label>
                     <div className="relative">
                       <FaClock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <select
@@ -366,7 +476,9 @@ function CustomerPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="notes" className="block text-sm font-medium">Additional Notes (Optional)</label>
+                  <label htmlFor="notes" className="block text-sm font-medium">
+                    Additional Notes (Optional)
+                  </label>
                   <textarea
                     id="notes"
                     name="notes"
@@ -378,6 +490,19 @@ function CustomerPage() {
                   />
                 </div>
 
+                {/* Show selected service and barber summary if available */}
+                {(formData.service || formData.barber) && (
+                  <div className="p-4 bg-blue-50 rounded-md">
+                    <h3 className="font-medium text-blue-800">Booking Summary</h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      {formData.service && (
+                        <p>Service: {services.find((s) => s.id === formData.service)?.name || formData.service}</p>
+                      )}
+                      {formData.barber && <p>Barber: {formData.barber}</p>}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   className="w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -385,7 +510,9 @@ function CustomerPage() {
                   Book Appointment
                 </button>
 
-                <p className="text-center text-sm text-gray-500">We'll confirm your appointment via email or phone call.</p>
+                <p className="text-center text-sm text-gray-500">
+                  We'll confirm your appointment via email or phone call.
+                </p>
               </form>
             </div>
           </div>
@@ -436,7 +563,7 @@ function CustomerPage() {
           <div className="grid gap-8 md:grid-cols-3">
             <div>
               <div className="flex items-center gap-2 font-bold text-xl text-white">
-                {/* <FaScissors className="h-6 w-6" /> */}
+                <GiScissors className="h-6 w-6" />
                 <span>CutNStyle</span>
               </div>
               <p className="mt-4">Professional barber services with a focus on customer satisfaction.</p>
@@ -476,43 +603,43 @@ const services = [
     name: "Classic Haircut",
     description: "Traditional haircut with clippers and scissors, includes a wash and style.",
     price: 25,
-    duration: "30 min"
+    duration: "30 min",
   },
   {
     id: "beard",
     name: "Beard Trim",
     description: "Professional beard shaping and trimming for a clean, polished look.",
     price: 15,
-    duration: "15 min"
+    duration: "15 min",
   },
   {
     id: "shave",
     name: "Hot Towel Shave",
     description: "Luxurious straight razor shave with hot towel treatment.",
     price: 30,
-    duration: "30 min"
+    duration: "30 min",
   },
   {
     id: "haircut-beard",
     name: "Haircut & Beard Trim",
     description: "Complete package including haircut and beard trimming.",
     price: 35,
-    duration: "45 min"
+    duration: "45 min",
   },
   {
     id: "kids",
     name: "Kids Haircut",
     description: "Haircuts for children under 12 years old.",
     price: 20,
-    duration: "20 min"
+    duration: "20 min",
   },
   {
     id: "styling",
     name: "Hair Styling",
     description: "Professional styling to achieve your desired look.",
     price: 20,
-    duration: "20 min"
-  }
+    duration: "20 min",
+  },
 ]
 
 // Sample data for barbers
@@ -522,22 +649,23 @@ const barbers = [
     role: "Master Barber",
     experience: "15+ years of experience",
     image: "https://placehold.co/300x300/e2e8f0/475569?text=John",
-    specialties: ["Classic Cuts", "Fades", "Beard Styling", "Hot Towel Shaves"]
+    specialties: ["Classic Cuts", "Fades", "Beard Styling", "Hot Towel Shaves"],
   },
   {
     name: "Mike Johnson",
     role: "Senior Barber",
     experience: "10+ years of experience",
     image: "https://placehold.co/300x300/e2e8f0/475569?text=Mike",
-    specialties: ["Modern Styles", "Hair Design", "Color Treatment", "Skin Fades"]
+    specialties: ["Modern Styles", "Hair Design", "Color Treatment", "Skin Fades"],
   },
   {
     name: "David Williams",
     role: "Barber",
     experience: "5+ years of experience",
     image: "https://placehold.co/300x300/e2e8f0/475569?text=David",
-    specialties: ["Trendy Cuts", "Beard Grooming", "Razor Work", "Kids Cuts"]
-  }
+    specialties: ["Trendy Cuts", "Beard Grooming", "Razor Work", "Kids Cuts"],
+  },
 ]
 
 export default CustomerPage
+
