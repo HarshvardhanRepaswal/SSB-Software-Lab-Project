@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB with proper error handling
-mongoose.connect('mongodb+srv://Cluster90319:TVtnd2B2dB5m@cluster90319.h1fut.mongodb.net/?retryWrites=true&w=majority&appName=Cluster90319')
+mongoose.connect('mongodb+srv://hvrSSB04:qwertySSB1234@clusterssb.6zmqk.mongodb.net/')
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     // Only start the server after successful database connection
