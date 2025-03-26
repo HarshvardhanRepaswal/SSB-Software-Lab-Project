@@ -10,7 +10,7 @@ const BarberSchema = new Schema({
   address: {type: String, required: true},
   experience: {type: String, required: true},
   specialties: {type: Array},
-  password: {type: String, required: true}
+  password: {type: String, required: true, unique: true}
 });
 
 const BarberModel = model('Barber', BarberSchema);
