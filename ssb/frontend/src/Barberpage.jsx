@@ -13,58 +13,10 @@ function BarberPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [barberInfo, setBarberInfo] = useState(null)
   const [activeTab, setActiveTab] = useState("pending")
-
-  // Mock data for demonstration
-  const pendingAppointments = [
-    {
-      id: "1",
-      customerName: "Michael Brown",
-      service: "Classic Haircut",
-      date: "2025-03-15",
-      time: "10:00 AM",
-      phone: "(555) 123-4567",
-      notes: "First time customer",
-    },
-    {
-      id: "2",
-      customerName: "Sarah Johnson",
-      service: "Haircut & Beard Trim",
-      date: "2025-03-15",
-      time: "11:30 AM",
-      phone: "(555) 987-6543",
-      notes: "",
-    },
-    {
-      id: "3",
-      customerName: "Robert Davis",
-      service: "Hot Towel Shave",
-      date: "2025-03-16",
-      time: "2:00 PM",
-      phone: "(555) 456-7890",
-      notes: "Prefers hot towel extra hot",
-    },
-  ]
-
-  const confirmedAppointments = [
-    {
-      id: "4",
-      customerName: "Jennifer Wilson",
-      service: "Classic Haircut",
-      date: "2025-03-15",
-      time: "9:30 AM",
-      phone: "(555) 234-5678",
-      notes: "",
-    },
-    {
-      id: "5",
-      customerName: "David Martinez",
-      service: "Beard Trim",
-      date: "2025-03-16",
-      time: "11:00 AM",
-      phone: "(555) 876-5432",
-      notes: "Regular customer",
-    },
-  ]
+  const [pendingAppointments, setPendingAppointments] = useState([])
+  const [confirmedAppointments, setConfirmedAppointments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Check if user is logged in on component mount
   useEffect(() => {
@@ -72,13 +24,43 @@ function BarberPage() {
     const storedBarberInfo = localStorage.getItem("barberInfo")
 
     if (storedBarberInfo) {
-      setBarberInfo(JSON.parse(storedBarberInfo))
+      const parsedInfo = JSON.parse(storedBarberInfo)
+      setBarberInfo(parsedInfo)
       setIsLoggedIn(true)
+
+      // Fetch appointments for this barber
+      fetchAppointments(parsedInfo.name || barbername)
     } else if (!barbername) {
       // If no barber info in localStorage and no barbername in URL, redirect to login
       navigate("/barberSignIn")
+    } else {
+      // If barbername is in URL but no localStorage, fetch appointments for that barber
+      fetchAppointments(barbername)
     }
   }, [barbername, navigate])
+
+  // Fetch appointments for the barber
+  const fetchAppointments = async (barberName) => {
+    if (!barberName) return
+
+    try {
+      setLoading(true)
+      const response = await fetch(`http://localhost:4000/barber-appointments/${barberName}`)
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch appointments")
+      }
+
+      const data = await response.json()
+      setPendingAppointments(data.pendingAppointments || [])
+      setConfirmedAppointments(data.confirmedAppointments || [])
+      setLoading(false)
+    } catch (err) {
+      console.error("Error fetching appointments:", err)
+      setError("Failed to load appointments. Please try again.")
+      setLoading(false)
+    }
+  }
 
   const handleLogout = () => {
     // Clear barber info from localStorage
@@ -89,22 +71,59 @@ function BarberPage() {
     navigate("/barberSignIn")
   }
 
-  const handleAccept = (id) => {
-    // In a real app, you would update the appointment status in your backend
-    console.log(`Accepting appointment ${id}`)
-    alert(`Appointment ${id} accepted successfully!`)
+  const handleAccept = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:4000/appointments/${id}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to approve appointment")
+      }
+
+      // Update the local state
+      const appointment = pendingAppointments.find((app) => app._id === id)
+      if (appointment) {
+        setPendingAppointments(pendingAppointments.filter((app) => app._id !== id))
+        setConfirmedAppointments([...confirmedAppointments, { ...appointment, approved: true }])
+      }
+
+      alert("Appointment approved successfully!")
+    } catch (error) {
+      console.error("Error approving appointment:", error)
+      alert("Failed to approve appointment. Please try again.")
+    }
   }
 
-  const handleReject = (id) => {
-    // In a real app, you would update the appointment status in your backend
-    console.log(`Rejecting appointment ${id}`)
-    alert(`Appointment ${id} rejected.`)
+  const handleReject = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:4000/appointments/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to reject appointment")
+      }
+
+      // Update the local state
+      setPendingAppointments(pendingAppointments.filter((app) => app._id !== id))
+
+      alert("Appointment rejected successfully!")
+    } catch (error) {
+      console.error("Error rejecting appointment:", error)
+      alert("Failed to reject appointment. Please try again.")
+    }
   }
 
   // If not logged in and no barbername, show loading or redirect
   if (!isLoggedIn && !barbername) {
     return <div className="min-h-screen flex items-center justify-center">Redirecting to login...</div>
   }
+
+  const currentBarberName = barbername || (barberInfo && barberInfo.name) || "Barber"
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -119,7 +138,7 @@ function BarberPage() {
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
                 <FaUserCircle className="h-5 w-5 text-gray-600" />
-                <span className="font-medium">{barbername || (barberInfo && barberInfo.name) || "Barber"}</span>
+                <span className="font-medium">{currentBarberName}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -141,10 +160,6 @@ function BarberPage() {
               <span className="font-medium">Dashboard</span>
             </div>
             <div className="mt-2 flex items-center gap-3 p-3 rounded-md hover:bg-gray-100">
-              <FaClock className="h-5 w-5 text-gray-500" />
-              <span>My Schedule</span>
-            </div>
-            <div className="mt-2 flex items-center gap-3 p-3 rounded-md hover:bg-gray-100">
               <FaUserCircle className="h-5 w-5 text-gray-500" />
               <span>Profile</span>
             </div>
@@ -156,7 +171,7 @@ function BarberPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold">Barber Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {barbername || (barberInfo && barberInfo.name) || "Barber"}</p>
+              <p className="text-gray-600">Welcome back, {currentBarberName}</p>
             </div>
 
             <div className="mt-4 sm:mt-0">
@@ -176,7 +191,12 @@ function BarberPage() {
           <div className="grid gap-4 md:grid-cols-3 mb-6">
             <div className="bg-white rounded-lg border p-4 shadow-sm">
               <div className="text-sm font-medium text-gray-500">Today's Appointments</div>
-              <div className="mt-1 text-2xl font-bold">3</div>
+              <div className="mt-1 text-2xl font-bold">
+                {
+                  confirmedAppointments.filter((app) => new Date(app.date).toDateString() === new Date().toDateString())
+                    .length
+                }
+              </div>
             </div>
 
             <div className="bg-white rounded-lg border p-4 shadow-sm">
@@ -208,17 +228,24 @@ function BarberPage() {
             </div>
 
             <div className="p-4">
-              {activeTab === "pending" ? (
+              {loading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">{error}</div>
+              ) : activeTab === "pending" ? (
                 pendingAppointments.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">No pending appointment requests</div>
                 ) : (
                   <div className="space-y-4">
                     {pendingAppointments.map((appointment) => (
-                      <div key={appointment.id} className="border rounded-lg p-4">
+                      <div key={appointment._id} className="border rounded-lg p-4">
                         <div className="grid gap-4 md:grid-cols-3">
                           <div>
                             <h3 className="font-medium">{appointment.customerName}</h3>
                             <p className="text-sm text-gray-500">{appointment.phone}</p>
+                            <p className="text-sm text-gray-500">{appointment.email}</p>
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -239,14 +266,14 @@ function BarberPage() {
                         </div>
                         <div className="mt-4 flex justify-end gap-2">
                           <button
-                            onClick={() => handleReject(appointment.id)}
+                            onClick={() => handleReject(appointment._id)}
                             className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-md hover:bg-red-50"
                           >
                             <FaTimes className="inline-block mr-1 h-3 w-3" />
                             Reject
                           </button>
                           <button
-                            onClick={() => handleAccept(appointment.id)}
+                            onClick={() => handleAccept(appointment._id)}
                             className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
                           >
                             <FaCheck className="inline-block mr-1 h-3 w-3" />
@@ -262,11 +289,12 @@ function BarberPage() {
               ) : (
                 <div className="space-y-4">
                   {confirmedAppointments.map((appointment) => (
-                    <div key={appointment.id} className="border rounded-lg p-4">
+                    <div key={appointment._id} className="border rounded-lg p-4">
                       <div className="grid gap-4 md:grid-cols-3">
                         <div>
                           <h3 className="font-medium">{appointment.customerName}</h3>
                           <p className="text-sm text-gray-500">{appointment.phone}</p>
+                          <p className="text-sm text-gray-500">{appointment.email}</p>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">

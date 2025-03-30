@@ -8,6 +8,11 @@ function CustomerPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeService, setActiveService] = useState(null)
   const [selectedBarber, setSelectedBarber] = useState("")
+  const [barbers, setBarbers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [bookingSuccess, setBookingSuccess] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -18,6 +23,30 @@ function CustomerPage() {
     time: "",
     notes: "",
   })
+
+  // Fetch barbers from the API
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("http://localhost:4000/barbers")
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch barbers")
+        }
+
+        const data = await response.json()
+        setBarbers(data)
+        setLoading(false)
+      } catch (err) {
+        console.error("Error fetching barbers:", err)
+        setError("Failed to load barbers. Please try again later.")
+        setLoading(false)
+      }
+    }
+
+    fetchBarbers()
+  }, [])
 
   // Calculate min and max dates for booking (today to 10 days ahead)
   const getTodayDate = () => {
@@ -53,25 +82,56 @@ function CustomerPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
-    // Here you would typically send the data to your backend
-    alert("Booking request submitted! We'll contact you to confirm your appointment.")
+    setSubmitting(true)
+    setBookingSuccess(false)
 
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      service: "",
-      barber: "",
-      date: "",
-      time: "",
-      notes: "",
-    })
-    setActiveService(null)
-    setSelectedBarber("")
+    try {
+      // Get the service name instead of just the ID
+      const serviceName = services.find((s) => s.id === formData.service)?.name || formData.service
+
+      // Send appointment data to the server
+      const response = await fetch("http://localhost:4000/appointments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          service: serviceName, // Use the service name instead of ID
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to book appointment")
+      }
+
+      // Show success message
+      setBookingSuccess(true)
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        service: "",
+        barber: "",
+        date: "",
+        time: "",
+        notes: "",
+      })
+      setActiveService(null)
+      setSelectedBarber("")
+
+      // Scroll to the top of the booking form
+      document.getElementById("booking").scrollIntoView({ behavior: "smooth" })
+    } catch (err) {
+      console.error("Error booking appointment:", err)
+      setError("Failed to book appointment. Please try again later.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleBookWithBarber = (barberName) => {
@@ -249,41 +309,67 @@ function CustomerPage() {
               <h2 className="text-3xl font-bold">Meet Our Barbers</h2>
               <p className="mt-2 text-gray-600">Skilled professionals ready to serve you</p>
             </div>
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {barbers.map((barber) => (
-                <div key={barber.name} className="overflow-hidden rounded-lg bg-white shadow-md">
-                  <div className="relative h-64 w-full">
-                    <img
-                      src={barber.image || "/placeholder.svg"}
-                      alt={barber.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold">{barber.name}</h3>
-                    <p className="text-blue-600">{barber.role}</p>
-                    <p className="mt-2 text-sm text-gray-600">{barber.experience}</p>
-                    <div className="mt-4">
-                      <h4 className="font-medium">Specialties:</h4>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {barber.specialties.map((specialty) => (
-                          <span key={specialty} className="rounded-full bg-gray-100 px-3 py-1 text-sm">
-                            {specialty}
-                          </span>
-                        ))}
-                      </div>
+
+            {loading ? (
+              // Loading state
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : error ? (
+              // Error state
+              <div className="text-center py-12">
+                <p className="text-red-500">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : barbers.length === 0 ? (
+              // No barbers found
+              <div className="text-center py-12">
+                <p className="text-gray-500">No barbers available at the moment.</p>
+              </div>
+            ) : (
+              // Display barbers from database
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {barbers.map((barber) => (
+                  <div key={barber.id} className="overflow-hidden rounded-lg bg-white shadow-md">
+                    <div className="relative h-64 w-full">
+                      <img
+                        src={barber.image || "/placeholder.svg"}
+                        alt={barber.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    {/* Book with this barber button */}
-                    <button
-                      onClick={() => handleBookWithBarber(barber.name)}
-                      className="mt-6 w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                      Book with {barber.name}
-                    </button>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold">{barber.name}</h3>
+                      <p className="text-blue-600">{barber.role}</p>
+                      <p className="mt-2 text-sm text-gray-600">{barber.experience}</p>
+                      <div className="mt-4">
+                        <h4 className="font-medium">Specialties:</h4>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {barber.specialties &&
+                            barber.specialties.map((specialty) => (
+                              <span key={specialty} className="rounded-full bg-gray-100 px-3 py-1 text-sm">
+                                {specialty}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                      {/* Book with this barber button */}
+                      <button
+                        onClick={() => handleBookWithBarber(barber.name)}
+                        className="mt-6 w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      >
+                        Book with {barber.name.split(" ")[0]}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -317,6 +403,13 @@ function CustomerPage() {
                 <h2 className="text-3xl font-bold">Book Your Appointment</h2>
                 <p className="mt-2 text-gray-600">Fill out the form below to schedule your visit</p>
               </div>
+
+              {bookingSuccess && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md text-green-600">
+                  <p className="font-medium">Booking request submitted successfully!</p>
+                  <p className="mt-1">We'll contact you to confirm your appointment.</p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border bg-white p-6 shadow-sm">
                 <div className="grid gap-6 md:grid-cols-2">
@@ -399,7 +492,7 @@ function CustomerPage() {
                     </select>
                   </div>
 
-                  {/* New Barber Selection Dropdown */}
+                  {/* Barber Selection Dropdown */}
                   <div className="space-y-2">
                     <label htmlFor="barber" className="block text-sm font-medium">
                       Select Barber
@@ -414,8 +507,8 @@ function CustomerPage() {
                     >
                       <option value="">Choose a barber</option>
                       {barbers.map((barber) => (
-                        <option key={barber.name} value={barber.name}>
-                          {barber.name} ({barber.role})
+                        <option key={barber.id} value={barber.name}>
+                          {barber.name}
                         </option>
                       ))}
                       <option value="Any">Any Available Barber</option>
@@ -506,8 +599,9 @@ function CustomerPage() {
                 <button
                   type="submit"
                   className="w-full rounded-md bg-blue-600 py-2 px-4 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  disabled={submitting}
                 >
-                  Book Appointment
+                  {submitting ? "Submitting..." : "Book Appointment"}
                 </button>
 
                 <p className="text-center text-sm text-gray-500">
@@ -639,31 +733,6 @@ const services = [
     description: "Professional styling to achieve your desired look.",
     price: 20,
     duration: "20 min",
-  },
-]
-
-// Sample data for barbers
-const barbers = [
-  {
-    name: "John Smith",
-    role: "Master Barber",
-    experience: "15+ years of experience",
-    image: "https://placehold.co/300x300/e2e8f0/475569?text=John",
-    specialties: ["Classic Cuts", "Fades", "Beard Styling", "Hot Towel Shaves"],
-  },
-  {
-    name: "Mike Johnson",
-    role: "Senior Barber",
-    experience: "10+ years of experience",
-    image: "https://placehold.co/300x300/e2e8f0/475569?text=Mike",
-    specialties: ["Modern Styles", "Hair Design", "Color Treatment", "Skin Fades"],
-  },
-  {
-    name: "David Williams",
-    role: "Barber",
-    experience: "5+ years of experience",
-    image: "https://placehold.co/300x300/e2e8f0/475569?text=David",
-    specialties: ["Trendy Cuts", "Beard Grooming", "Razor Work", "Kids Cuts"],
   },
 ]
 
