@@ -1,10 +1,21 @@
 const express = require("express")
 const cors = require("cors")
 const mongoose = require("mongoose")
+const http = require("http")
+const { Server } = require("socket.io")
 const Barber = require("./models/barber")
 const Appointment = require("./models/appointment")
 
 const app = express()
+const server = http.createServer(app)
+
+// Set up Socket.IO with CORS
+const io = new Server(server, {
+  cors: {
+    origin: "*", // In production, restrict this to your frontend domain
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  },
+})
 
 // Middleware
 app.use(cors())
@@ -16,12 +27,32 @@ mongoose
   .then(() => {
     console.log("Connected to MongoDB Atlas")
     // Only start the server after successful database connection
-    app.listen(4000, () => console.log("Server running on port 4000"))
+    server.listen(4000, () => console.log("Server running on port 4000"))
   })
   .catch((err) => {
     console.error("MongoDB connection error:", err)
     process.exit(1) // Exit with error
   })
+
+// Socket.IO connection handling
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id)
+
+  // Join a room specific to the user or barber
+  socket.on("join", (data) => {
+    if (data.type === "user" && data.email) {
+      socket.join(`user:${data.email}`)
+      console.log(`User ${data.email} joined their room`)
+    } else if (data.type === "barber" && data.name) {
+      socket.join(`barber:${data.name}`)
+      console.log(`Barber ${data.name} joined their room`)
+    }
+  })
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id)
+  })
+})
 
 // API endpoint for creating a barber account
 app.post("/create-account", async (req, res) => {
@@ -120,7 +151,7 @@ app.get("/barbers", async (req, res) => {
   }
 })
 
-// NEW: API endpoint to create a new appointment
+// API endpoint to create a new appointment
 app.post("/appointments", async (req, res) => {
   try {
     const { name, email, phone, service, barber, date, time, notes } = req.body
@@ -139,6 +170,10 @@ app.post("/appointments", async (req, res) => {
     })
 
     console.log("Appointment created:", appointment)
+
+    // Emit event to barber's room to notify of new appointment
+    io.to(`barber:${barber}`).emit("new_appointment", appointment)
+
     res.status(201).json(appointment)
   } catch (error) {
     console.error("Error creating appointment:", error)
@@ -146,7 +181,7 @@ app.post("/appointments", async (req, res) => {
   }
 })
 
-// NEW: API endpoint to get appointments for a specific barber
+// API endpoint to get appointments for a specific barber
 app.get("/barber-appointments/:barberName", async (req, res) => {
   try {
     const { barberName } = req.params
@@ -165,7 +200,22 @@ app.get("/barber-appointments/:barberName", async (req, res) => {
   }
 })
 
-// NEW: API endpoint to approve an appointment
+// API endpoint to get appointments for a specific user by email
+app.get("/user-appointments/:email", async (req, res) => {
+  try {
+    const { email } = req.params
+
+    // Find all appointments for this user
+    const appointments = await Appointment.find({ email })
+
+    res.json(appointments)
+  } catch (error) {
+    console.error("Error fetching user appointments:", error)
+    res.status(500).json({ error: "Failed to fetch appointments" })
+  }
+})
+
+// API endpoint to approve an appointment
 app.put("/appointments/:id/approve", async (req, res) => {
   try {
     const { id } = req.params
@@ -176,6 +226,13 @@ app.put("/appointments/:id/approve", async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" })
     }
 
+    // Emit event to user's room to notify of appointment approval
+    io.to(`user:${appointment.email}`).emit("appointment_status_changed", {
+      id: appointment._id,
+      status: "approved",
+      appointment,
+    })
+
     res.json(appointment)
   } catch (error) {
     console.error("Error approving appointment:", error)
@@ -183,16 +240,29 @@ app.put("/appointments/:id/approve", async (req, res) => {
   }
 })
 
-// NEW: API endpoint to reject/delete an appointment
+// API endpoint to reject/delete an appointment
 app.delete("/appointments/:id", async (req, res) => {
   try {
     const { id } = req.params
 
-    const appointment = await Appointment.findByIdAndDelete(id)
+    const appointment = await Appointment.findById(id)
 
     if (!appointment) {
       return res.status(404).json({ error: "Appointment not found" })
     }
+
+    // Store the email before deleting
+    const userEmail = appointment.email
+
+    // Delete the appointment
+    await Appointment.findByIdAndDelete(id)
+
+    // Emit event to user's room to notify of appointment rejection
+    io.to(`user:${userEmail}`).emit("appointment_status_changed", {
+      id: appointment._id,
+      status: "rejected",
+      appointment,
+    })
 
     res.json({ message: "Appointment deleted successfully" })
   } catch (error) {

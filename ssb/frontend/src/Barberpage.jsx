@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FaCalendar, FaClock, FaCheck, FaTimes, FaUserCircle } from "react-icons/fa"
 import { useLocation, useNavigate } from "react-router-dom"
+import { io } from "socket.io-client" // This requires socket.io-client to be installed
 
 function BarberPage() {
   const location = useLocation()
@@ -17,6 +18,20 @@ function BarberPage() {
   const [confirmedAppointments, setConfirmedAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const socketRef = useRef(null)
+  const [newAppointmentAlert, setNewAppointmentAlert] = useState(false)
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    socketRef.current = io("http://localhost:4000")
+
+    // Clean up on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+      }
+    }
+  }, [])
 
   // Check if user is logged in on component mount
   useEffect(() => {
@@ -28,6 +43,25 @@ function BarberPage() {
       setBarberInfo(parsedInfo)
       setIsLoggedIn(true)
 
+      // Join barber's room for real-time updates
+      if (socketRef.current) {
+        const barberName = parsedInfo.name || barbername
+        socketRef.current.emit("join", { type: "barber", name: barberName })
+
+        // Listen for new appointments
+        socketRef.current.on("new_appointment", (appointment) => {
+          console.log("New appointment received:", appointment)
+          // Add to pending appointments
+          setPendingAppointments((prev) => [...prev, appointment])
+          // Show alert
+          setNewAppointmentAlert(true)
+          // Auto-hide alert after 5 seconds
+          setTimeout(() => {
+            setNewAppointmentAlert(false)
+          }, 5000)
+        })
+      }
+
       // Fetch appointments for this barber
       fetchAppointments(parsedInfo.name || barbername)
     } else if (!barbername) {
@@ -36,6 +70,11 @@ function BarberPage() {
     } else {
       // If barbername is in URL but no localStorage, fetch appointments for that barber
       fetchAppointments(barbername)
+
+      // Join barber's room for real-time updates
+      if (socketRef.current) {
+        socketRef.current.emit("join", { type: "barber", name: barbername })
+      }
     }
   }, [barbername, navigate])
 
@@ -84,12 +123,11 @@ function BarberPage() {
         throw new Error("Failed to approve appointment")
       }
 
+      const updatedAppointment = await response.json()
+
       // Update the local state
-      const appointment = pendingAppointments.find((app) => app._id === id)
-      if (appointment) {
-        setPendingAppointments(pendingAppointments.filter((app) => app._id !== id))
-        setConfirmedAppointments([...confirmedAppointments, { ...appointment, approved: true }])
-      }
+      setPendingAppointments(pendingAppointments.filter((app) => app._id !== id))
+      setConfirmedAppointments([...confirmedAppointments, updatedAppointment])
 
       alert("Appointment approved successfully!")
     } catch (error) {
@@ -127,6 +165,24 @@ function BarberPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* New Appointment Alert */}
+      {newAppointmentAlert && (
+        <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 shadow-lg rounded-lg p-4 max-w-md">
+          <div className="flex items-center">
+            <div className="bg-green-100 rounded-full p-2 mr-3">
+              <FaCalendar className="text-green-600 h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium">New Appointment Request!</p>
+              <p className="text-sm text-gray-600">You have a new booking request. Check your pending appointments.</p>
+            </div>
+            <button onClick={() => setNewAppointmentAlert(false)} className="ml-4 text-gray-400 hover:text-gray-600">
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4">
@@ -214,13 +270,21 @@ function BarberPage() {
           <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
             <div className="flex border-b">
               <button
-                className={`px-4 py-3 text-sm font-medium ${activeTab === "pending" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-gray-900"}`}
+                className={`px-4 py-3 text-sm font-medium ${
+                  activeTab === "pending"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
                 onClick={() => setActiveTab("pending")}
               >
                 Pending Requests ({pendingAppointments.length})
               </button>
               <button
-                className={`px-4 py-3 text-sm font-medium ${activeTab === "confirmed" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-gray-900"}`}
+                className={`px-4 py-3 text-sm font-medium ${
+                  activeTab === "confirmed"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
                 onClick={() => setActiveTab("confirmed")}
               >
                 Confirmed Appointments ({confirmedAppointments.length})

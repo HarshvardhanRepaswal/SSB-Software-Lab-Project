@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { FaPhone, FaCalendarAlt, FaUser, FaEnvelope, FaClock } from "react-icons/fa"
+import { useState, useEffect, useRef } from "react"
+import { FaPhone, FaCalendarAlt, FaUser, FaEnvelope, FaClock, FaBell } from "react-icons/fa"
 import { GiScissors } from "react-icons/gi"
+import { io } from "socket.io-client" // This requires socket.io-client to be installed
 
 function CustomerPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -13,6 +14,12 @@ function CustomerPage() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
+  const [userEmail, setUserEmail] = useState("")
+  const [userAppointments, setUserAppointments] = useState([])
+  const [loadingAppointments, setLoadingAppointments] = useState(false)
+  const [showNotification, setShowNotification] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState("")
+  const socketRef = useRef(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,6 +30,46 @@ function CustomerPage() {
     time: "",
     notes: "",
   })
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    socketRef.current = io("http://localhost:4000")
+
+    // Clean up on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+      }
+    }
+  }, [])
+
+  // Join user's room when email is set
+  useEffect(() => {
+    if (userEmail && socketRef.current) {
+      socketRef.current.emit("join", { type: "user", email: userEmail })
+
+      // Listen for appointment status changes
+      socketRef.current.on("appointment_status_changed", (data) => {
+        console.log("Appointment status changed:", data)
+
+        // Show notification
+        if (data.status === "approved") {
+          setNotificationMessage("Your appointment has been approved!")
+        } else if (data.status === "rejected") {
+          setNotificationMessage("Your appointment has been rejected.")
+        }
+        setShowNotification(true)
+
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => {
+          setShowNotification(false)
+        }, 5000)
+
+        // Refresh user appointments
+        fetchUserAppointments(userEmail)
+      })
+    }
+  }, [userEmail])
 
   // Fetch barbers from the API
   useEffect(() => {
@@ -47,6 +94,27 @@ function CustomerPage() {
 
     fetchBarbers()
   }, [])
+
+  // Fetch user appointments when email changes
+  const fetchUserAppointments = async (email) => {
+    if (!email) return
+
+    try {
+      setLoadingAppointments(true)
+      const response = await fetch(`http://localhost:4000/user-appointments/${email}`)
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch appointments")
+      }
+
+      const data = await response.json()
+      setUserAppointments(data)
+      setLoadingAppointments(false)
+    } catch (err) {
+      console.error("Error fetching user appointments:", err)
+      setLoadingAppointments(false)
+    }
+  }
 
   // Calculate min and max dates for booking (today to 10 days ahead)
   const getTodayDate = () => {
@@ -80,6 +148,11 @@ function CustomerPage() {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+
+    // If email is changed, update userEmail state
+    if (name === "email") {
+      setUserEmail(value)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -110,10 +183,13 @@ function CustomerPage() {
       // Show success message
       setBookingSuccess(true)
 
+      // Fetch updated appointments
+      fetchUserAppointments(formData.email)
+
       // Reset form
       setFormData({
         name: "",
-        email: "",
+        email: userEmail, // Keep the email for future bookings
         phone: "",
         service: "",
         barber: "",
@@ -138,8 +214,32 @@ function CustomerPage() {
     setSelectedBarber(barberName)
   }
 
+  // Format appointment status for display
+  const getStatusBadge = (appointment) => {
+    if (appointment.approved) {
+      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
+    } else {
+      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Notification */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-white border border-gray-200 shadow-lg rounded-lg p-4 max-w-md">
+          <div className="flex items-center">
+            <FaBell className="text-blue-600 mr-3 h-5 w-5" />
+            <div>
+              <p className="font-medium">{notificationMessage}</p>
+            </div>
+            <button onClick={() => setShowNotification(false)} className="ml-4 text-gray-400 hover:text-gray-600">
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white shadow-sm">
         <div className="container mx-auto px-4">
@@ -160,6 +260,9 @@ function CustomerPage() {
               </a>
               <a href="#barbers" className="font-medium hover:text-blue-600">
                 Our Barbers
+              </a>
+              <a href="#my-appointments" className="font-medium hover:text-blue-600">
+                My Appointments
               </a>
               <a href="#contact" className="font-medium hover:text-blue-600">
                 Contact
@@ -205,6 +308,9 @@ function CustomerPage() {
                 </a>
                 <a href="#barbers" className="font-medium hover:text-blue-600">
                   Our Barbers
+                </a>
+                <a href="#my-appointments" className="font-medium hover:text-blue-600">
+                  My Appointments
                 </a>
                 <a href="#contact" className="font-medium hover:text-blue-600">
                   Contact
@@ -370,6 +476,85 @@ function CustomerPage() {
                 ))}
               </div>
             )}
+          </div>
+        </section>
+
+        {/* My Appointments Section */}
+        <section id="my-appointments" className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="mb-12 text-center">
+              <h2 className="text-3xl font-bold">My Appointments</h2>
+              <p className="mt-2 text-gray-600">Track your booking status and upcoming appointments</p>
+            </div>
+
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-white rounded-lg border shadow-sm p-6">
+                <div className="mb-6">
+                  <label htmlFor="trackEmail" className="block text-sm font-medium mb-2">
+                    Enter your email to view your appointments
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      id="trackEmail"
+                      placeholder="Your email address"
+                      className="flex-1 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                    />
+                    <button
+                      onClick={() => fetchUserAppointments(userEmail)}
+                      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      disabled={!userEmail || loadingAppointments}
+                    >
+                      {loadingAppointments ? "Loading..." : "View Appointments"}
+                    </button>
+                  </div>
+                </div>
+
+                {loadingAppointments ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : userAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-lg">Your Appointments</h3>
+                    {userAppointments.map((appointment) => (
+                      <div key={appointment._id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{appointment.service}</h4>
+                            <p className="text-sm text-gray-600">with {appointment.barber}</p>
+                          </div>
+                          <div>{getStatusBadge(appointment)}</div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <FaCalendarAlt className="text-gray-400" />
+                            <span>{appointment.date}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FaClock className="text-gray-400" />
+                            <span>{appointment.time}</span>
+                          </div>
+                        </div>
+                        {appointment.notes && (
+                          <p className="mt-2 text-sm text-gray-600">
+                            <span className="font-medium">Notes:</span> {appointment.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : userEmail ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No appointments found for this email. Book your first appointment now!
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">Enter your email to view your appointments</div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
