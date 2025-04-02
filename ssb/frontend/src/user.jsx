@@ -811,7 +811,7 @@ function CustomerPage() {
                   <FaPhone />
                 </div>
                 <h3 className="mt-4 text-lg font-medium">Phone</h3>
-                <p className="mt-2 text-gray-600">(123) 456-7890</p>
+                <p className="mt-2 text-gray-600">(+91) 9335891448 </p>
               </div>
 
               <div className="rounded-lg bg-white p-6 shadow-sm text-center">
@@ -828,8 +828,7 @@ function CustomerPage() {
                 </div>
                 <h3 className="mt-4 text-lg font-medium">Working Hours</h3>
                 <p className="mt-2 text-gray-600">Mon-Fri: 9am - 8pm</p>
-                <p className="text-gray-600">Sat: 10am - 6pm</p>
-                <p className="text-gray-600">Sun: Closed</p>
+                <p className="text-gray-600">Weekends: 10am - 6pm</p>
               </div>
             </div>
           </div>
@@ -850,10 +849,10 @@ function CustomerPage() {
             <div>
               <h3 className="text-lg font-bold text-white">Contact Info</h3>
               <address className="mt-4 not-italic">
-                <p>123 Main Street, City</p>
+                <p>Tech Market, IIT Kharagpur </p>
                 <p className="mt-2 flex items-center gap-2">
                   <FaPhone className="h-4 w-4" />
-                  <span>(123) 456-7890</span>
+                  <span>(+91) 9335891448 </span>
                 </p>
               </address>
             </div>
@@ -861,8 +860,7 @@ function CustomerPage() {
               <h3 className="text-lg font-bold text-white">Opening Hours</h3>
               <ul className="mt-4 space-y-2">
                 <li>Monday - Friday: 9am - 8pm</li>
-                <li>Saturday: 10am - 6pm</li>
-                <li>Sunday: Closed</li>
+                <li>Weekends: 10am - 6pm</li>
               </ul>
             </div>
           </div>
