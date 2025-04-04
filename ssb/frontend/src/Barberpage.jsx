@@ -215,7 +215,10 @@ function BarberPage() {
               <FaCalendar className="h-5 w-5" />
               <span className="font-medium">Dashboard</span>
             </div>
-            <div className="mt-2 flex items-center gap-3 p-3 rounded-md hover:bg-gray-100">
+            <div
+              onClick={() => navigate(`/profile?barbername=${currentBarberName}`)}
+              className="mt-2 flex items-center gap-3 p-3 rounded-md hover:bg-gray-100 cursor-pointer"
+            >
               <FaUserCircle className="h-5 w-5 text-gray-500" />
               <span>Profile</span>
             </div>

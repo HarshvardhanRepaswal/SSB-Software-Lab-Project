@@ -153,6 +153,11 @@ function CustomerPage() {
     if (name === "email") {
       setUserEmail(value)
     }
+
+    // Validate phone number
+    if (name === "phone" && value && value.length !== 10) {
+      // Phone validation happens in the UI with conditional rendering
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -331,7 +336,7 @@ function CustomerPage() {
         {/* Hero Section */}
         <section className="relative bg-gray-100 py-20">
           <div className="container mx-auto px-4">
-            <div className="grid gap-8 md:grid-cols-2 items-center">
+            <div className="grid gap-8 items-center">
               <div className="space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight md:text-5xl">Professional Haircuts & Styling</h1>
                 <p className="text-lg text-gray-600">
@@ -352,13 +357,6 @@ function CustomerPage() {
                     View Services
                   </a>
                 </div>
-              </div>
-              <div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden">
-                <img
-                  src="https://placehold.co/600x400/e2e8f0/475569?text=Barber+Shop"
-                  alt="Barber Shop"
-                  className="w-full h-full object-cover"
-                />
               </div>
             </div>
           </div>
@@ -441,17 +439,12 @@ function CustomerPage() {
               // Display barbers from database
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 {barbers.map((barber) => (
-                  <div key={barber.id} className="overflow-hidden rounded-lg bg-white shadow-md">
-                    <div className="relative h-64 w-full">
-                      <img
-                        src={barber.image || "/placeholder.svg"}
-                        alt={barber.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-6">
+                  <div
+                    key={barber.id}
+                    className="overflow-hidden rounded-lg bg-white shadow-md h-[400px] flex flex-col"
+                  >
+                    <div className="p-6 flex-1">
                       <h3 className="text-xl font-bold">{barber.name}</h3>
-                      <p className="text-blue-600">{barber.role}</p>
                       <p className="mt-2 text-sm text-gray-600">{barber.experience}</p>
                       <div className="mt-4">
                         <h4 className="font-medium">Specialties:</h4>
@@ -463,6 +456,11 @@ function CustomerPage() {
                               </span>
                             ))}
                         </div>
+                      </div>
+                      <div className="mt-4">
+                        <h4 className="font-medium">Contact:</h4>
+                        <p className="text-sm text-gray-600">{barber.phone}</p>
+                        <p className="text-sm text-gray-600">{barber.email}</p>
                       </div>
                       {/* Book with this barber button */}
                       <button
@@ -632,6 +630,9 @@ function CustomerPage() {
                         onChange={handleInputChange}
                         required
                       />
+                      {formData.phone && formData.phone.length !== 10 && (
+                        <p className="text-red-500 text-xs mt-1">Phone number must be exactly 10 digits.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -696,7 +697,6 @@ function CustomerPage() {
                           {barber.name}
                         </option>
                       ))}
-                      <option value="Any">Any Available Barber</option>
                     </select>
                   </div>
                 </div>
